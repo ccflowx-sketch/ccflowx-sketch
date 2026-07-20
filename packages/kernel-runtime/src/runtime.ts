@@ -1,6 +1,7 @@
 import type { PlatformModule } from "@ccflowx/kernel-contracts";
 import { Registry } from "@ccflowx/kernel-registry";
 import { MetadataRegistry } from "@ccflowx/kernel-metadata";
+import { randomUUID } from "node:crypto";
 
 import { DependencyContainer } from "./container.js";
 import { EventBus } from "./event-bus.js";
@@ -14,6 +15,9 @@ export type RuntimeState =
   | "failed";
 
 export class PlatformRuntime {
+  private readonly runtimeId = randomUUID();
+  private readonly createdAt = new Date();
+
   private readonly container = new DependencyContainer();
   private readonly registry = new Registry();
   private readonly metadata = new MetadataRegistry();
@@ -21,6 +25,18 @@ export class PlatformRuntime {
   private readonly modules: PlatformModule[] = [];
 
   private state: RuntimeState = "created";
+
+  getState(): RuntimeState {
+    return this.state;
+  }
+
+  getRuntimeId(): string {
+    return this.runtimeId;
+  }
+
+  getCreatedAt(): Date {
+    return this.createdAt;
+  }
 
   registerModule(module: PlatformModule): void {
     if (this.state !== "created") {
@@ -35,14 +51,11 @@ export class PlatformRuntime {
       type: "runtime.module.registered",
       timestamp: new Date(),
       payload: {
+        runtimeId: this.runtimeId,
         module: module.name,
         version: module.version
       }
     });
-  }
-
-  getState(): RuntimeState {
-    return this.state;
   }
 
   getContainer(): DependencyContainer {
@@ -90,6 +103,7 @@ export class PlatformRuntime {
       type: "runtime.starting",
       timestamp: new Date(),
       payload: {
+        runtimeId: this.runtimeId,
         state: this.state
       }
     });
@@ -105,6 +119,7 @@ export class PlatformRuntime {
         type: "runtime.started",
         timestamp: new Date(),
         payload: {
+          runtimeId: this.runtimeId,
           state: this.state
         }
       });
@@ -115,6 +130,7 @@ export class PlatformRuntime {
         type: "runtime.failed",
         timestamp: new Date(),
         payload: {
+          runtimeId: this.runtimeId,
           state: this.state,
           error
         }
@@ -137,6 +153,7 @@ export class PlatformRuntime {
       type: "runtime.stopping",
       timestamp: new Date(),
       payload: {
+        runtimeId: this.runtimeId,
         state: this.state
       }
     });
@@ -152,6 +169,7 @@ export class PlatformRuntime {
         type: "runtime.stopped",
         timestamp: new Date(),
         payload: {
+          runtimeId: this.runtimeId,
           state: this.state
         }
       });
@@ -162,6 +180,7 @@ export class PlatformRuntime {
         type: "runtime.failed",
         timestamp: new Date(),
         payload: {
+          runtimeId: this.runtimeId,
           state: this.state,
           error
         }
