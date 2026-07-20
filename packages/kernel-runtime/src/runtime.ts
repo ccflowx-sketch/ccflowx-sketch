@@ -62,7 +62,13 @@ export class PlatformRuntime {
       }
     });
   }
-
+    getModule(
+    name: string
+  ): PlatformModule | undefined {
+    return this.modules.find(
+      (module) => module.name === name
+    );
+  }
   getContainer(): DependencyContainer {
     return this.container;
   }
