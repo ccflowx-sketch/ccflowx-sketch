@@ -1,5 +1,5 @@
 {
-  "name": "@ccflowx/kernel-runtime",
+  "name": "@ccflowx/platform-bootstrap",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,8 +10,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ccflowx/kernel-contracts": "workspace:*",
+    "@ccflowx/kernel-health": "workspace:*",
+    "@ccflowx/kernel-metadata": "workspace:*",
+    "@ccflowx/kernel-observability": "workspace:*",
     "@ccflowx/kernel-registry": "workspace:*",
-    "@ccflowx/kernel-metadata": "workspace:*"
+    "@ccflowx/kernel-runtime": "workspace:*"
   }
 }

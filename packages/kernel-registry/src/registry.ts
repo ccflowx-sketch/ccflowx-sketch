@@ -1,30 +1,39 @@
-export interface RegistryEntry {
-  name: string;
-  version: string;
+export interface Registration<T = unknown> {
+  id: string;
   type: string;
-  metadata?: Record<string, unknown>;
+  value: T;
 }
 
-export class PlatformRegistry {
-  private readonly entries = new Map<string, RegistryEntry>();
+export class Registry {
+  private readonly registrations = new Map<string, Registration>();
 
-  register(entry: RegistryEntry): void {
-    if (this.entries.has(entry.name)) {
-      throw new Error(`Registry entry already exists: ${entry.name}`);
+  register<T>(registration: Registration<T>): void {
+    if (this.registrations.has(registration.id)) {
+      throw new Error(`Registration '${registration.id}' already exists.`);
     }
 
-    this.entries.set(entry.name, entry);
+    this.registrations.set(registration.id, registration);
   }
 
-  get(name: string): RegistryEntry | undefined {
-    return this.entries.get(name);
+  resolve<T>(id: string): T {
+    const registration = this.registrations.get(id);
+
+    if (!registration) {
+      throw new Error(`Registration '${id}' not found.`);
+    }
+
+    return registration.value as T;
   }
 
-  list(): RegistryEntry[] {
-    return Array.from(this.entries.values());
+  has(id: string): boolean {
+    return this.registrations.has(id);
   }
 
-  has(name: string): boolean {
-    return this.entries.has(name);
+  list(): Registration[] {
+    return [...this.registrations.values()];
+  }
+
+  clear(): void {
+    this.registrations.clear();
   }
 }

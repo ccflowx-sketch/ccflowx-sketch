@@ -1,9 +1,3 @@
-import { PlatformRuntime } from "./runtime.js";
-
-export async function bootstrapPlatform(): Promise<PlatformRuntime> {
-  const runtime = new PlatformRuntime();
-
-  await runtime.start();
-
-  return runtime;
-}
+export * from "./container.js";
+export * from "./runtime.js";
+export * from "./event-bus.js";

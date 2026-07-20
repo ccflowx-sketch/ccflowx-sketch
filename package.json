@@ -6,7 +6,7 @@
   "description": "CCFlowX - AI-Native, Metadata-Driven, Multi-Tenant Platform",
   "license": "UNLICENSED",
   "scripts": {
-    "build": "turbo run build",
+    "build": "pnpm -r --if-present run build",
     "dev": "turbo run dev",
     "test": "turbo run test",
     "lint": "turbo run lint",
@@ -15,8 +15,9 @@
     "clean": "turbo run clean"
   },
   "devDependencies": {
+    "prettier": "^3.5.3",
+    "supabase": "^2.109.1",
     "turbo": "^2.5.4",
-    "typescript": "^5.8.3",
-    "prettier": "^3.5.3"
+    "typescript": "^5.8.3"
   }
 }
