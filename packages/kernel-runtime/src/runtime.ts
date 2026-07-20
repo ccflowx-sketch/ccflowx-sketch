@@ -69,6 +69,10 @@ export class PlatformRuntime {
       (module) => module.name === name
     );
   }
+
+  getModules(): readonly PlatformModule[] {
+    return this.modules;
+  }
   getContainer(): DependencyContainer {
     return this.container;
   }
