@@ -39,9 +39,14 @@ export class PlatformRuntime {
   }
 
   registerModule(module: PlatformModule): void {
-    if (this.state !== "created") {
+    if (
+      this.modules.some(
+        (registeredModule) =>
+          registeredModule.name === module.name
+      )
+    ) {
       throw new Error(
-        "Modules can only be registered before runtime start"
+        `Module already registered: ${module.name}`
       );
     }
 
