@@ -7,6 +7,8 @@ import { DependencyContainer } from "./container.js";
 import { EventBus } from "./event-bus.js";
 import { RuntimeEvents } from "./runtime-events.js";
 
+import type { RuntimeHealth } from "./runtime-health.js";
+
 export type RuntimeState =
   | "created"
   | "starting"
@@ -79,6 +81,29 @@ export class PlatformRuntime {
         version: module.version
       }
     });
+  }
+
+  unregisterModule(name: string): boolean {
+    const index = this.modules.findIndex(
+      module => module.name === name
+    );
+
+    if (index === -1) {
+      return false;
+    }
+
+    this.modules.splice(index, 1);
+
+    void this.eventBus.publish({
+      type: RuntimeEvents.ModuleUnregistered,
+      timestamp: new Date(),
+      payload: {
+        runtimeId: this.runtimeId,
+        module: name
+      }
+    });
+
+    return true;
   }
 
   getModule(
@@ -239,27 +264,4 @@ export class PlatformRuntime {
     this.eventBus.clear();
     this.state = "created";
   }
-}
-
-unregisterModule(name: string): boolean {
-  const index = this.modules.findIndex(
-    module => module.name === name
-  );
-
-  if (index === -1) {
-    return false;
-  }
-
-  this.modules.splice(index, 1);
-
-  void this.eventBus.publish({
-    type: RuntimeEvents.ModuleUnregistered,
-    timestamp: new Date(),
-    payload: {
-      runtimeId: this.runtimeId,
-      module: name
-    }
-  });
-
-  return true;
 }

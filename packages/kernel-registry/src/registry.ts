@@ -5,43 +5,56 @@ export interface Registration<T = unknown> {
 }
 
 export class Registry {
-  private readonly registrations = new Map<string, Registration>();
+  private readonly registrations =
+    new Map<string, Registration>();
 
-  register<T>(registration: Registration<T>): void {
+  register<T>(
+    registration: Registration<T>
+  ): void {
     if (this.registrations.has(registration.id)) {
-      throw new Error(`Registration '${registration.id}' already exists.`);
+      throw new Error(
+        `Registration '${registration.id}' already exists.`
+      );
     }
 
-    this.registrations.set(registration.id, registration);
+    this.registrations.set(
+      registration.id,
+      registration
+    );
   }
 
   resolve<T>(id: string): T {
-    const registration = this.registrations.get(id);
+    const registration =
+      this.registrations.get(id);
 
     if (!registration) {
-      throw new Error(`Registration '${id}' not found.`);
+      throw new Error(
+        `Registration '${id}' not found.`
+      );
     }
 
     return registration.value as T;
+  }
+
+  get<T>(id: string): T | undefined {
+    return this.registrations.get(id)?.value as
+      | T
+      | undefined;
   }
 
   has(id: string): boolean {
     return this.registrations.has(id);
   }
 
-  list(): Registration[] {
-    return [...this.registrations.values()];
+  remove(id: string): boolean {
+    return this.registrations.delete(id);
+  }
+
+  list(): readonly string[] {
+    return [...this.registrations.keys()];
   }
 
   clear(): void {
     this.registrations.clear();
   }
 }
-
-get<T>(name: string): T | undefined
-
-has(name: string): boolean
-
-remove(name: string): boolean
-
-list(): readonly string[]
