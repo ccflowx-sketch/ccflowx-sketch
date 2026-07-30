@@ -37,3 +37,11 @@ export class Registry {
     this.registrations.clear();
   }
 }
+
+get<T>(name: string): T | undefined
+
+has(name: string): boolean
+
+remove(name: string): boolean
+
+list(): readonly string[]

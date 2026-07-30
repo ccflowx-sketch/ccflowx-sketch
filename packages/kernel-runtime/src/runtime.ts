@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 
 import { DependencyContainer } from "./container.js";
 import { EventBus } from "./event-bus.js";
+import { RuntimeEvents } from "./runtime-events.js";
 
 export type RuntimeState =
   | "created"
@@ -30,6 +31,24 @@ export class PlatformRuntime {
     return this.state;
   }
 
+  getHealth(): RuntimeHealth {
+    return {
+      runtimeId: this.runtimeId,
+      state: this.state,
+      uptimeMs: Date.now() - this.createdAt.getTime(),
+      moduleCount: this.modules.length,
+      startedAt: this.createdAt
+    };
+  }
+
+  getModuleCount(): number {
+    return this.modules.length;
+  }
+
+  getContainer(): DependencyContainer {
+    return this.container;
+  }
+
   getRuntimeId(): string {
     return this.runtimeId;
   }
@@ -41,8 +60,7 @@ export class PlatformRuntime {
   registerModule(module: PlatformModule): void {
     if (
       this.modules.some(
-        (registeredModule) =>
-          registeredModule.name === module.name
+        registeredModule => registeredModule.name === module.name
       )
     ) {
       throw new Error(
@@ -53,7 +71,7 @@ export class PlatformRuntime {
     this.modules.push(module);
 
     void this.eventBus.publish({
-      type: "runtime.module.registered",
+      type: RuntimeEvents.ModuleRegistered,
       timestamp: new Date(),
       payload: {
         runtimeId: this.runtimeId,
@@ -62,19 +80,17 @@ export class PlatformRuntime {
       }
     });
   }
-    getModule(
+
+  getModule(
     name: string
   ): PlatformModule | undefined {
     return this.modules.find(
-      (module) => module.name === name
+      module => module.name === name
     );
   }
 
   getModules(): readonly PlatformModule[] {
     return this.modules;
-  }
-  getContainer(): DependencyContainer {
-    return this.container;
   }
 
   register<T>(
@@ -115,7 +131,7 @@ export class PlatformRuntime {
     this.state = "starting";
 
     await this.eventBus.publish({
-      type: "runtime.starting",
+      type: RuntimeEvents.Starting,
       timestamp: new Date(),
       payload: {
         runtimeId: this.runtimeId,
@@ -131,7 +147,7 @@ export class PlatformRuntime {
       this.state = "started";
 
       await this.eventBus.publish({
-        type: "runtime.started",
+        type: RuntimeEvents.Started,
         timestamp: new Date(),
         payload: {
           runtimeId: this.runtimeId,
@@ -142,7 +158,7 @@ export class PlatformRuntime {
       this.state = "failed";
 
       await this.eventBus.publish({
-        type: "runtime.failed",
+        type: RuntimeEvents.Failed,
         timestamp: new Date(),
         payload: {
           runtimeId: this.runtimeId,
@@ -156,7 +172,10 @@ export class PlatformRuntime {
   }
 
   async shutdown(): Promise<void> {
-    if (this.state !== "started") {
+    if (
+      this.state !== "started" &&
+      this.state !== "failed"
+    ) {
       throw new Error(
         `Runtime cannot shutdown from state: ${this.state}`
       );
@@ -165,7 +184,7 @@ export class PlatformRuntime {
     this.state = "stopping";
 
     await this.eventBus.publish({
-      type: "runtime.stopping",
+      type: RuntimeEvents.Stopping,
       timestamp: new Date(),
       payload: {
         runtimeId: this.runtimeId,
@@ -181,7 +200,7 @@ export class PlatformRuntime {
       this.state = "stopped";
 
       await this.eventBus.publish({
-        type: "runtime.stopped",
+        type: RuntimeEvents.Stopped,
         timestamp: new Date(),
         payload: {
           runtimeId: this.runtimeId,
@@ -192,7 +211,7 @@ export class PlatformRuntime {
       this.state = "failed";
 
       await this.eventBus.publish({
-        type: "runtime.failed",
+        type: RuntimeEvents.Failed,
         timestamp: new Date(),
         payload: {
           runtimeId: this.runtimeId,
@@ -204,4 +223,43 @@ export class PlatformRuntime {
       throw error;
     }
   }
+
+  reset(): void {
+    if (
+      this.state !== "stopped" &&
+      this.state !== "failed"
+    ) {
+      throw new Error(
+        `Runtime cannot reset from state: ${this.state}`
+      );
+    }
+
+    this.modules.length = 0;
+    this.container.clear();
+    this.eventBus.clear();
+    this.state = "created";
+  }
+}
+
+unregisterModule(name: string): boolean {
+  const index = this.modules.findIndex(
+    module => module.name === name
+  );
+
+  if (index === -1) {
+    return false;
+  }
+
+  this.modules.splice(index, 1);
+
+  void this.eventBus.publish({
+    type: RuntimeEvents.ModuleUnregistered,
+    timestamp: new Date(),
+    payload: {
+      runtimeId: this.runtimeId,
+      module: name
+    }
+  });
+
+  return true;
 }
