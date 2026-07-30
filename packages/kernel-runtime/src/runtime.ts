@@ -9,6 +9,10 @@ import { RuntimeEvents } from "./runtime-events.js";
 
 import type { RuntimeHealth } from "./runtime-health.js";
 
+import type { RuntimeMetrics } from "./runtime-metrics.js";
+import type { RuntimeSnapshot } from "./runtime-snapshot.js";
+
+
 export type RuntimeState =
   | "created"
   | "starting"
@@ -29,6 +33,13 @@ export class PlatformRuntime {
 
   private state: RuntimeState = "created";
 
+  private readonly metrics: RuntimeMetrics = {
+    startCount: 0,
+    stopCount: 0,
+    failureCount: 0,
+    registeredModules: 0
+  };
+
   getState(): RuntimeState {
     return this.state;
   }
@@ -41,6 +52,40 @@ export class PlatformRuntime {
       moduleCount: this.modules.length,
       startedAt: this.createdAt
     };
+  }
+
+  getMetrics(): RuntimeMetrics {
+    return {
+      ...this.metrics
+    };
+  }
+
+  getSnapshot(): RuntimeSnapshot {
+    return {
+      runtimeId: this.runtimeId,
+      state: this.state,
+      createdAt: this.createdAt,
+      modules: this.modules.map(
+        module => module.name
+      ),
+      metrics: this.getMetrics()
+    };
+  }
+
+  isCreated(): boolean {
+    return this.state === "created";
+  }
+
+  isRunning(): boolean {
+    return this.state === "started";
+  }
+
+  isStopped(): boolean {
+    return this.state === "stopped";
+  }
+
+  isFailed(): boolean {
+    return this.state === "failed";
   }
 
   getModuleCount(): number {
@@ -72,6 +117,8 @@ export class PlatformRuntime {
 
     this.modules.push(module);
 
+    this.metrics.registeredModules++;
+
     void this.eventBus.publish({
       type: RuntimeEvents.ModuleRegistered,
       timestamp: new Date(),
@@ -93,6 +140,8 @@ export class PlatformRuntime {
     }
 
     this.modules.splice(index, 1);
+
+    this.metrics.registeredModules--;
 
     void this.eventBus.publish({
       type: RuntimeEvents.ModuleUnregistered,
@@ -170,6 +219,7 @@ export class PlatformRuntime {
       }
 
       this.state = "started";
+      this.metrics.startCount++;
 
       await this.eventBus.publish({
         type: RuntimeEvents.Started,
@@ -181,6 +231,8 @@ export class PlatformRuntime {
       });
     } catch (error) {
       this.state = "failed";
+
+      this.metrics.failureCount++;
 
       await this.eventBus.publish({
         type: RuntimeEvents.Failed,
@@ -224,6 +276,8 @@ export class PlatformRuntime {
 
       this.state = "stopped";
 
+      this.metrics.stopCount++;
+
       await this.eventBus.publish({
         type: RuntimeEvents.Stopped,
         timestamp: new Date(),
@@ -234,6 +288,8 @@ export class PlatformRuntime {
       });
     } catch (error) {
       this.state = "failed";
+
+      this.metrics.failureCount++;
 
       await this.eventBus.publish({
         type: RuntimeEvents.Failed,
