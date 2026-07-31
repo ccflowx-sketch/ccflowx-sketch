@@ -8,3 +8,5 @@ import "reflect-metadata";
 export * from "./module-loader.js";
 export * from "./capability-manifest.js";
 export * from "./capability.js";
+export * from "./capability-resolver.js";
+export * from "./capability-runtime.js";
