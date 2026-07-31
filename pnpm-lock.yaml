@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
     devDependencies:
       prettier:
         specifier: ^3.5.3
@@ -178,6 +182,9 @@ packages:
     engines: {node: '>=14'}
     hasBin: true
 
+  reflect-metadata@0.2.2:
+    resolution: {integrity: sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q==}
+
   supabase@2.109.1:
     resolution: {integrity: sha512-N2yP2MHTxOxXBWhfn3poudpJn4pkPosAUo7J/46FTou/l7wOwFi9tox8NSN6HljWkfM0zhwPRimNNGC9XBMoxQ==}
     hasBin: true
@@ -257,6 +264,8 @@ snapshots:
   jose@6.2.3: {}
 
   prettier@3.9.5: {}
+
+  reflect-metadata@0.2.2: {}
 
   supabase@2.109.1:
     dependencies:
