@@ -1,12 +1,16 @@
+import "reflect-metadata";
+
 export * from "./container.js";
 export * from "./runtime.js";
 export * from "./event-bus.js";
 export * from "./runtime-events.js";
 export * from "./inject.js";
 export * from "./dependency-metadata.js";
-import "reflect-metadata";
 export * from "./module-loader.js";
 export * from "./capability-manifest.js";
 export * from "./capability.js";
 export * from "./capability-resolver.js";
 export * from "./capability-runtime.js";
+export * from "./runtime-health.js";
+export * from "./runtime-metrics.js";
+export * from "./runtime-snapshot.js";
