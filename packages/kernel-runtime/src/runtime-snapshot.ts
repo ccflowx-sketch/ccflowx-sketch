@@ -1,9 +1,11 @@
 import type { RuntimeMetrics } from "./runtime-metrics.js";
+import type { RuntimeState } from "./runtime.js";
 
 export interface RuntimeSnapshot {
   runtimeId: string;
-  state: string;
+  version: string;
+  state: RuntimeState;
   createdAt: Date;
-  modules: readonly string[];
+  modules: string[];
   metrics: RuntimeMetrics;
 }

@@ -3,4 +3,10 @@ export interface RuntimeMetrics {
   stopCount: number;
   failureCount: number;
   registeredModules: number;
+
+  lastStartupTimeMs: number;
+  averageStartupTimeMs: number;
+
+  lastShutdownTimeMs: number;
+  averageShutdownTimeMs: number;
 }

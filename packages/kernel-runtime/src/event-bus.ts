@@ -4,16 +4,22 @@ export interface PlatformEvent<T = unknown> {
   payload: T;
 }
 
-export type EventHandler<T = unknown> = (
+export type EventHandler<T> = (
   event: PlatformEvent<T>
 ) => void | Promise<void>;
 
-export class EventBus {
-  private readonly handlers = new Map<string, EventHandler[]>();
+export class EventBus<
+  TEvents extends object
+> {
 
-  subscribe(
-    type: string,
-    handler: EventHandler
+  private readonly handlers = new Map<
+    keyof TEvents,
+    EventHandler<any>[]
+  >();
+
+  subscribe<K extends keyof TEvents>(
+    type: K,
+    handler: EventHandler<TEvents[K]>
   ): () => void {
     const handlers =
       this.handlers.get(type) ?? [];
@@ -23,28 +29,30 @@ export class EventBus {
     this.handlers.set(type, handlers);
 
     return () => {
-      const currentHandlers =
+      const current =
         this.handlers.get(type);
 
-      if (!currentHandlers) {
+      if (!current) {
         return;
       }
 
       const index =
-        currentHandlers.indexOf(handler);
+        current.indexOf(handler);
 
       if (index !== -1) {
-        currentHandlers.splice(index, 1);
+        current.splice(index, 1);
       }
 
-      if (currentHandlers.length === 0) {
+      if (current.length === 0) {
         this.handlers.delete(type);
       }
     };
   }
 
-  async publish(
-    event: PlatformEvent
+  async publish<K extends keyof TEvents>(
+    event: PlatformEvent<TEvents[K]> & {
+      type: K;
+    }
   ): Promise<void> {
     const handlers =
       this.handlers.get(event.type) ?? [];
@@ -58,6 +66,3 @@ export class EventBus {
     this.handlers.clear();
   }
 }
-
-"*"
-

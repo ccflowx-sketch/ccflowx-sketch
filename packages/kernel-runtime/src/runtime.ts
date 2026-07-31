@@ -12,6 +12,8 @@ import type { RuntimeHealth } from "./runtime-health.js";
 import type { RuntimeMetrics } from "./runtime-metrics.js";
 import type { RuntimeSnapshot } from "./runtime-snapshot.js";
 
+import type { RuntimeEventMap } from "./event-types.js";
+
 
 export type RuntimeState =
   | "created"
@@ -24,11 +26,20 @@ export type RuntimeState =
 export class PlatformRuntime {
   private readonly runtimeId = randomUUID();
   private readonly createdAt = new Date();
+  private startedAt?: Date;
+  private stoppedAt?: Date;
+  private lastError?: unknown;
+  private startupStartedAt?: number;
+  private shutdownStartedAt?: number;
+
+  private readonly version = "0.1.0";
 
   private readonly container = new DependencyContainer();
   private readonly registry = new Registry();
   private readonly metadata = new MetadataRegistry();
-  private readonly eventBus = new EventBus();
+  private readonly eventBus =
+    new EventBus<RuntimeEventMap>();
+
   private readonly modules: PlatformModule[] = [];
 
   private state: RuntimeState = "created";
@@ -37,7 +48,11 @@ export class PlatformRuntime {
     startCount: 0,
     stopCount: 0,
     failureCount: 0,
-    registeredModules: 0
+    registeredModules: 0,
+    averageStartupTimeMs: 0,
+    averageShutdownTimeMs: 0,
+    lastStartupTimeMs: 0,
+    lastShutdownTimeMs: 0
   };
 
   getState(): RuntimeState {
@@ -47,10 +62,22 @@ export class PlatformRuntime {
   getHealth(): RuntimeHealth {
     return {
       runtimeId: this.runtimeId,
+      version: this.version,
       state: this.state,
       uptimeMs: Date.now() - this.createdAt.getTime(),
       moduleCount: this.modules.length,
-      startedAt: this.createdAt
+
+      ...(this.startedAt !== undefined
+        ? { startedAt: this.startedAt }
+        : {}),
+
+      ...(this.stoppedAt !== undefined
+        ? { stoppedAt: this.stoppedAt }
+        : {}),
+
+      ...(this.lastError !== undefined
+        ? { lastError: this.lastError }
+        : {})
     };
   }
 
@@ -63,6 +90,7 @@ export class PlatformRuntime {
   getSnapshot(): RuntimeSnapshot {
     return {
       runtimeId: this.runtimeId,
+      version: this.version,
       state: this.state,
       createdAt: this.createdAt,
       modules: this.modules.map(
@@ -102,6 +130,10 @@ export class PlatformRuntime {
 
   getCreatedAt(): Date {
     return this.createdAt;
+  }
+
+  getVersion(): string {
+    return this.version;
   }
 
   registerModule(module: PlatformModule): void {
@@ -191,7 +223,7 @@ export class PlatformRuntime {
     return this.metadata;
   }
 
-  getEventBus(): EventBus {
+  getEventBus(): EventBus<RuntimeEventMap> {
     return this.eventBus;
   }
 
@@ -202,6 +234,7 @@ export class PlatformRuntime {
       );
     }
 
+    this.startupStartedAt = Date.now();
     this.state = "starting";
 
     await this.eventBus.publish({
@@ -218,8 +251,24 @@ export class PlatformRuntime {
         await module.initialize();
       }
 
-      this.state = "started";
-      this.metrics.startCount++;
+  this.state = "started";
+  this.startedAt = new Date();
+
+  this.metrics.startCount++;
+
+  const startupDuration =
+    Date.now() - this.startupStartedAt!;
+
+  this.metrics.lastStartupTimeMs =
+    startupDuration;
+
+  this.metrics.averageStartupTimeMs =
+    (
+      (this.metrics.averageStartupTimeMs *
+        (this.metrics.startCount - 1)) +
+      startupDuration
+    ) / this.metrics.startCount;
+
 
       await this.eventBus.publish({
         type: RuntimeEvents.Started,
@@ -231,6 +280,7 @@ export class PlatformRuntime {
       });
     } catch (error) {
       this.state = "failed";
+      this.lastError = error;
 
       this.metrics.failureCount++;
 
@@ -258,6 +308,9 @@ export class PlatformRuntime {
       );
     }
 
+
+
+    this.shutdownStartedAt = Date.now();
     this.state = "stopping";
 
     await this.eventBus.publish({
@@ -275,8 +328,24 @@ export class PlatformRuntime {
       }
 
       this.state = "stopped";
+      const shutdownDuration =
+        Date.now() - this.shutdownStartedAt!;
+
+      this.metrics.lastShutdownTimeMs =
+        shutdownDuration;
 
       this.metrics.stopCount++;
+
+  this.metrics.averageShutdownTimeMs =
+    (
+      (this.metrics.averageShutdownTimeMs *
+        (this.metrics.stopCount - 1)) +
+      shutdownDuration
+    ) / this.metrics.stopCount;
+
+  this.stoppedAt = new Date();
+
+
 
       await this.eventBus.publish({
         type: RuntimeEvents.Stopped,
@@ -288,7 +357,7 @@ export class PlatformRuntime {
       });
     } catch (error) {
       this.state = "failed";
-
+      this.lastError = error;
       this.metrics.failureCount++;
 
       await this.eventBus.publish({
