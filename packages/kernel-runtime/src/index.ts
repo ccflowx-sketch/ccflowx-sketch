@@ -6,3 +6,5 @@ export * from "./inject.js";
 export * from "./dependency-metadata.js";
 import "reflect-metadata";
 export * from "./module-loader.js";
+export * from "./capability-manifest.js";
+export * from "./capability.js";
