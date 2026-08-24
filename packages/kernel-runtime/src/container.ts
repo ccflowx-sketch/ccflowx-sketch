@@ -198,6 +198,16 @@ resolveDependency<T>(
 }
 
 
+resolveAll(): unknown[] {
+  const resolved: unknown[] = [];
+
+  for (const token of this.providers.keys()) {
+    resolved.push(this.resolve(token));
+  }
+
+  return resolved;
+}
+
   clear(): void {
     this.providers.clear();
     this.descriptors.clear();
