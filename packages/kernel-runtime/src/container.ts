@@ -191,6 +191,13 @@ const dependencyTokens =
     );
   }
 
+resolveDependency<T>(
+  token: ProviderToken
+): T {
+  return this.resolve<T>(token);
+}
+
+
   clear(): void {
     this.providers.clear();
     this.descriptors.clear();
