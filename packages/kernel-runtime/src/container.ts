@@ -225,7 +225,63 @@ resolveDependencies<T>(
   return new implementation(...args);
 }
 
+resolveWithStack<T>(
+  token: ProviderToken,
+  stack: ProviderToken[] = []
+): T {
+  if (stack.includes(token)) {
+    const cycle = [
+      ...stack,
+      token
+    ]
+      .map(String)
+      .join(" -> ");
 
+    throw new Error(
+      `Circular dependency detected: ${cycle}`
+    );
+  }
+
+  const provider =
+    this.providers.get(token);
+
+  if (!provider) {
+    throw new Error(
+      `Provider not found: ${String(token)}`
+    );
+  }
+
+  if (
+    provider.useValue !==
+    undefined
+  ) {
+    return provider.useValue as T;
+  }
+
+  if (
+    provider.lifetime === "singleton" &&
+    provider.instance !== undefined
+  ) {
+    return provider.instance as T;
+  }
+
+  if (!provider.useFactory) {
+    throw new Error(
+      `Provider ${String(token)} has no factory`
+    );
+  }
+
+  const instance =
+    provider.useFactory();
+
+  if (
+    provider.lifetime === "singleton"
+  ) {
+    provider.instance = instance;
+  }
+
+  return instance as T;
+}
 
 
 
