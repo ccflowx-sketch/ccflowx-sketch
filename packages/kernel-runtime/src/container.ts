@@ -214,6 +214,38 @@ resolveClass<T>(
   return new implementation();
 }
 
+resolveDependencies<T>(
+  implementation: new (...args: any[]) => T,
+  dependencies: ProviderToken[]
+): T {
+  const args = dependencies.map(
+    dependency => this.resolve(dependency)
+  );
+
+  return new implementation(...args);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   clear(): void {
     this.providers.clear();
