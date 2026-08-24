@@ -208,6 +208,13 @@ resolveAll(): unknown[] {
   return resolved;
 }
 
+resolveClass<T>(
+  implementation: new (...args: any[]) => T
+): T {
+  return new implementation();
+}
+
+
   clear(): void {
     this.providers.clear();
     this.descriptors.clear();
