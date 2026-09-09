@@ -10,3 +10,10 @@ export interface ExecutionContext {
   actorId?: string;
   correlationId: string;
 }
+
+export interface RuntimeContract {
+  readonly runtimeId: string;
+  readonly createdAt: Date;
+
+  resolve<T>(token: string | symbol): T;
+}
