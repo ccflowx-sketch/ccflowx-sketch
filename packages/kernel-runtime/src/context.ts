@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto";
-import type { ProviderToken, DependencyContainer } from "./container.js";
+import type {
+  DependencyContainer,
+  ProviderToken
+} from "./container.js";
 
 export interface RuntimeContext {
   readonly runtimeId: string;
@@ -9,7 +12,9 @@ export interface RuntimeContext {
   resolve<T>(token: ProviderToken): T;
 }
 
-export class DefaultRuntimeContext implements RuntimeContext {
+export class DefaultRuntimeContext
+  implements RuntimeContext
+{
   readonly runtimeId: string;
   readonly correlationId: string;
   readonly createdAt: Date;
@@ -32,6 +37,3 @@ export class DefaultRuntimeContext implements RuntimeContext {
     return this.container.resolve<T>(token);
   }
 }
-
-export * from "./runtime-snapshot.js";
-export * from "./context.js";

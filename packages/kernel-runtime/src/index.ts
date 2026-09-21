@@ -14,3 +14,4 @@ export * from "./capability-runtime.js";
 export * from "./runtime-health.js";
 export * from "./runtime-metrics.js";
 export * from "./runtime-snapshot.js";
+export * from "./context.js";

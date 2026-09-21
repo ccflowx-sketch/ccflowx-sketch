@@ -14,6 +14,11 @@ import type { RuntimeSnapshot } from "./runtime-snapshot.js";
 
 import type { RuntimeEventMap } from "./event-types.js";
 
+import {
+  DefaultRuntimeContext,
+  type RuntimeContext
+} from "./context.js";
+
 
 export type RuntimeState =
   | "created"
@@ -57,6 +62,14 @@ export class PlatformRuntime {
 
   getState(): RuntimeState {
     return this.state;
+  }
+
+  createContext(correlationId?: string): RuntimeContext {
+    return new DefaultRuntimeContext(
+      this.runtimeId,
+      this.container,
+      correlationId
+    );
   }
 
   getHealth(): RuntimeHealth {
