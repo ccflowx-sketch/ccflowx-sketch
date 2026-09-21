@@ -1,30 +1,33 @@
 import {
-  PlatformRuntime,
-  CapabilityRuntime
+  CapabilityRuntime,
+  KernelBoot,
+  PlatformRuntime
 } from "@ccflowx/kernel-runtime";
 
 export class KernelBootstrap {
-  private readonly runtime =
-    new PlatformRuntime();
+  private readonly kernelBoot =
+    new KernelBoot();
 
   private readonly capabilities =
     new CapabilityRuntime();
 
   getRuntime(): PlatformRuntime {
-    return this.runtime;
+    return this.kernelBoot.getRuntime();
   }
 
   getCapabilityRuntime(): CapabilityRuntime {
     return this.capabilities;
   }
 
-  async boot(): Promise<void> {
+  async boot(): Promise<PlatformRuntime> {
     await this.capabilities.initialize();
-    await this.runtime.start();
+    await this.kernelBoot.start();
+
+    return this.kernelBoot.getRuntime();
   }
 
   async shutdown(): Promise<void> {
-    await this.runtime.shutdown();
+    await this.kernelBoot.shutdown();
     await this.capabilities.shutdown();
   }
 }
