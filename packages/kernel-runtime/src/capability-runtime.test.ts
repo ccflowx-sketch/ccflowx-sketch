@@ -13,6 +13,7 @@ describe("CapabilityRuntime", () => {
       version: "1.0.0",
       manifest: {
         id: "capability-b",
+        name: "Capability B",
         version: "1.0.0",
         dependencies: ["capability-a"]
       },
@@ -29,6 +30,7 @@ describe("CapabilityRuntime", () => {
       version: "1.0.0",
       manifest: {
         id: "capability-a",
+        name: "Capability A",
         version: "1.0.0"
       },
       initialize: async () => {
@@ -57,6 +59,7 @@ describe("CapabilityRuntime", () => {
       version: "1.0.0",
       manifest: {
         id: "capability-b",
+        name: "Capability B",
         version: "1.0.0",
         dependencies: ["capability-a"]
       },
@@ -71,6 +74,7 @@ describe("CapabilityRuntime", () => {
       version: "1.0.0",
       manifest: {
         id: "capability-a",
+        name: "Capability A",
         version: "1.0.0"
       },
       initialize: async () => {},
@@ -96,6 +100,7 @@ describe("CapabilityRuntime", () => {
       version: "1.0.0",
       manifest: {
         id: "capability-b",
+        name: "Capability B",
         version: "1.0.0",
         dependencies: ["missing-capability"]
       },
@@ -118,6 +123,7 @@ describe("CapabilityRuntime", () => {
       version: "1.0.0",
       manifest: {
         id: "capability-a",
+        name: "Capability A",
         version: "1.0.0",
         dependencies: ["capability-b"]
       },
@@ -130,6 +136,7 @@ describe("CapabilityRuntime", () => {
       version: "1.0.0",
       manifest: {
         id: "capability-b",
+        name: "Capability B",
         version: "1.0.0",
         dependencies: ["capability-a"]
       },
@@ -152,6 +159,7 @@ describe("CapabilityRuntime", () => {
       version: "1.0.0",
       manifest: {
         id: "capability-a",
+        name: "Capability A",
         version: "1.0.0"
       },
       initialize: async () => {},
