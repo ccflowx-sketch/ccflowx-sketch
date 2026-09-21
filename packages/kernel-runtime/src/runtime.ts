@@ -1,4 +1,5 @@
 import type { PlatformModule } from "@ccflowx/kernel-contracts";
+
 import { Registry } from "@ccflowx/kernel-registry";
 import { MetadataRegistry } from "@ccflowx/kernel-metadata";
 import { randomUUID } from "node:crypto";
@@ -6,19 +7,17 @@ import { randomUUID } from "node:crypto";
 import { DependencyContainer } from "./container.js";
 import { EventBus } from "./event-bus.js";
 import { RuntimeEvents } from "./runtime-events.js";
+import { ModuleDependencyResolver } from "./module-dependency-resolver.js";
 
 import type { RuntimeHealth } from "./runtime-health.js";
-
 import type { RuntimeMetrics } from "./runtime-metrics.js";
 import type { RuntimeSnapshot } from "./runtime-snapshot.js";
-
 import type { RuntimeEventMap } from "./event-types.js";
 
 import {
   DefaultRuntimeContext,
   type RuntimeContext
 } from "./context.js";
-
 
 export type RuntimeState =
   | "created"
@@ -44,6 +43,9 @@ export class PlatformRuntime {
   private readonly metadata = new MetadataRegistry();
   private readonly eventBus =
     new EventBus<RuntimeEventMap>();
+
+  private readonly moduleDependencyResolver =
+    new ModuleDependencyResolver();
 
   private readonly modules: PlatformModule[] = [];
 
@@ -152,7 +154,8 @@ export class PlatformRuntime {
   registerModule(module: PlatformModule): void {
     if (
       this.modules.some(
-        registeredModule => registeredModule.name === module.name
+        registeredModule =>
+          registeredModule.name === module.name
       )
     ) {
       throw new Error(
@@ -260,28 +263,32 @@ export class PlatformRuntime {
     });
 
     try {
-      for (const module of this.modules) {
+      const orderedModules =
+        this.moduleDependencyResolver.resolveOrder(
+          this.modules
+        );
+
+      for (const module of orderedModules) {
         await module.initialize();
       }
 
-  this.state = "started";
-  this.startedAt = new Date();
+      this.state = "started";
+      this.startedAt = new Date();
 
-  this.metrics.startCount++;
+      this.metrics.startCount++;
 
-  const startupDuration =
-    Date.now() - this.startupStartedAt!;
+      const startupDuration =
+        Date.now() - this.startupStartedAt!;
 
-  this.metrics.lastStartupTimeMs =
-    startupDuration;
+      this.metrics.lastStartupTimeMs =
+        startupDuration;
 
-  this.metrics.averageStartupTimeMs =
-    (
-      (this.metrics.averageStartupTimeMs *
-        (this.metrics.startCount - 1)) +
-      startupDuration
-    ) / this.metrics.startCount;
-
+      this.metrics.averageStartupTimeMs =
+        (
+          (this.metrics.averageStartupTimeMs *
+            (this.metrics.startCount - 1)) +
+          startupDuration
+        ) / this.metrics.startCount;
 
       await this.eventBus.publish({
         type: RuntimeEvents.Started,
@@ -321,8 +328,6 @@ export class PlatformRuntime {
       );
     }
 
-
-
     this.shutdownStartedAt = Date.now();
     this.state = "stopping";
 
@@ -336,11 +341,17 @@ export class PlatformRuntime {
     });
 
     try {
-      for (const module of [...this.modules].reverse()) {
+      const orderedModules =
+        this.moduleDependencyResolver.resolveOrder(
+          this.modules
+        );
+
+      for (const module of [...orderedModules].reverse()) {
         await module.shutdown();
       }
 
       this.state = "stopped";
+
       const shutdownDuration =
         Date.now() - this.shutdownStartedAt!;
 
@@ -349,16 +360,14 @@ export class PlatformRuntime {
 
       this.metrics.stopCount++;
 
-  this.metrics.averageShutdownTimeMs =
-    (
-      (this.metrics.averageShutdownTimeMs *
-        (this.metrics.stopCount - 1)) +
-      shutdownDuration
-    ) / this.metrics.stopCount;
+      this.metrics.averageShutdownTimeMs =
+        (
+          (this.metrics.averageShutdownTimeMs *
+            (this.metrics.stopCount - 1)) +
+          shutdownDuration
+        ) / this.metrics.stopCount;
 
-  this.stoppedAt = new Date();
-
-
+      this.stoppedAt = new Date();
 
       await this.eventBus.publish({
         type: RuntimeEvents.Stopped,
@@ -371,6 +380,7 @@ export class PlatformRuntime {
     } catch (error) {
       this.state = "failed";
       this.lastError = error;
+
       this.metrics.failureCount++;
 
       await this.eventBus.publish({

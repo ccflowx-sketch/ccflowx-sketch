@@ -16,3 +16,5 @@ export * from "./runtime-metrics.js";
 export * from "./runtime-snapshot.js";
 export * from "./context.js";
 export * from "./kernel-boot.js";
+export * from "./module-dependency.js";
+export * from "./module-dependency-resolver.js";
