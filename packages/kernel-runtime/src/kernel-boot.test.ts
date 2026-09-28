@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import type {
+  PlatformModule
+} from "@ccflowx/kernel-contracts";
+
+import type { Capability } from "./capability.js";
 import { KernelBoot } from "./kernel-boot.js";
 
 describe("KernelBoot", () => {
@@ -42,7 +47,10 @@ describe("KernelBoot", () => {
     const boot = new KernelBoot();
 
     await boot.start();
-    await expect(boot.shutdown()).resolves.toBeUndefined();
+
+    await expect(
+      boot.shutdown()
+    ).resolves.toBeUndefined();
   });
 
   it("initializes registered modules during startup", async () => {
@@ -142,87 +150,137 @@ describe("KernelBoot", () => {
       "capability:shutdown"
     ]);
   });
-});
 
-it("initializes capabilities before starting the platform runtime", async () => {
-  const events: string[] = [];
+  it("does not start platform modules when capability initialization fails", async () => {
+    const events: string[] = [];
 
-  const boot = new KernelBoot({
-    capabilities: [
-      {
-        manifest: {
-          id: "test-capability",
-          name: "Test Capability",
-          version: "1.0.0"
-        },
-        name: "test-capability",
-        version: "1.0.0",
-        initialize: async () => {
-          events.push("capability:init");
-        },
-        shutdown: async () => {
-          events.push("capability:shutdown");
-        }
+    const failingCapability: Capability = {
+      manifest: {
+        id: "failing-capability",
+        name: "Failing Capability",
+        version: "1.0.0"
+      },
+      name: "failing-capability",
+      version: "1.0.0",
+      initialize: async () => {
+        events.push("capability:init");
+
+        throw new Error(
+          "capability initialization failed"
+        );
+      },
+      shutdown: async () => {
+        events.push("capability:shutdown");
       }
-    ],
-    modules: [
-      {
-        name: "test-module",
-        version: "1.0.0",
-        initialize: async () => {
-          events.push("module:init");
-        },
-        shutdown: async () => {
-          events.push("module:shutdown");
-        }
+    };
+
+    const module: PlatformModule = {
+      name: "platform-module",
+      version: "1.0.0",
+      initialize: async () => {
+        events.push("module:init");
+      },
+      shutdown: async () => {
+        events.push("module:shutdown");
       }
-    ]
+    };
+
+    const boot = new KernelBoot({
+      capabilities: [failingCapability],
+      modules: [module]
+    });
+
+    await expect(
+      boot.start()
+    ).rejects.toThrow(
+      "capability initialization failed"
+    );
+
+    expect(events).toEqual([
+      "capability:init"
+    ]);
   });
 
-  await boot.start();
+  it("initializes capabilities before starting the platform runtime", async () => {
+    const events: string[] = [];
 
-  expect(events).toEqual([
-    "capability:init",
-    "module:init"
-  ]);
-});
-
-it("shuts down the platform runtime before capabilities", async () => {
-  const events: string[] = [];
-
-  const boot = new KernelBoot({
-    capabilities: [
-      {
-        manifest: {
-          id: "test-capability",
-          name: "Test Capability",
-          version: "1.0.0"
-        },
-        name: "test-capability",
-        version: "1.0.0",
-        initialize: async () => {},
-        shutdown: async () => {
-          events.push("capability:shutdown");
+    const boot = new KernelBoot({
+      capabilities: [
+        {
+          manifest: {
+            id: "test-capability",
+            name: "Test Capability",
+            version: "1.0.0"
+          },
+          name: "test-capability",
+          version: "1.0.0",
+          initialize: async () => {
+            events.push("capability:init");
+          },
+          shutdown: async () => {
+            events.push("capability:shutdown");
+          }
         }
-      }
-    ],
-    modules: [
-      {
-        name: "test-module",
-        version: "1.0.0",
-        initialize: async () => {},
-        shutdown: async () => {
-          events.push("module:shutdown");
+      ],
+      modules: [
+        {
+          name: "test-module",
+          version: "1.0.0",
+          initialize: async () => {
+            events.push("module:init");
+          },
+          shutdown: async () => {
+            events.push("module:shutdown");
+          }
         }
-      }
-    ]
+      ]
+    });
+
+    await boot.start();
+
+    expect(events).toEqual([
+      "capability:init",
+      "module:init"
+    ]);
   });
 
-  await boot.start();
-  await boot.shutdown();
+  it("shuts down the platform runtime before capabilities", async () => {
+    const events: string[] = [];
 
-  expect(events).toEqual([
-    "module:shutdown",
-    "capability:shutdown"
-  ]);
+    const boot = new KernelBoot({
+      capabilities: [
+        {
+          manifest: {
+            id: "test-capability",
+            name: "Test Capability",
+            version: "1.0.0"
+          },
+          name: "test-capability",
+          version: "1.0.0",
+          initialize: async () => {},
+          shutdown: async () => {
+            events.push("capability:shutdown");
+          }
+        }
+      ],
+      modules: [
+        {
+          name: "test-module",
+          version: "1.0.0",
+          initialize: async () => {},
+          shutdown: async () => {
+            events.push("module:shutdown");
+          }
+        }
+      ]
+    });
+
+    await boot.start();
+    await boot.shutdown();
+
+    expect(events).toEqual([
+      "module:shutdown",
+      "capability:shutdown"
+    ]);
+  });
 });
