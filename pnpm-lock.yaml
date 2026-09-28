@@ -63,6 +63,9 @@ importers:
 
   packages/platform-bootstrap:
     dependencies:
+      '@ccflowx/kernel-contracts':
+        specifier: workspace:*
+        version: link:../kernel-contracts
       '@ccflowx/kernel-health':
         specifier: workspace:*
         version: link:../kernel-health

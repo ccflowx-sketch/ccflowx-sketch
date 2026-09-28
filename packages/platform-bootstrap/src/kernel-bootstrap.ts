@@ -1,15 +1,41 @@
+import type { PlatformModule } from "@ccflowx/kernel-contracts";
+
 import {
+  Capability,
   CapabilityRuntime,
   KernelBoot,
   PlatformRuntime
 } from "@ccflowx/kernel-runtime";
 
-export class KernelBootstrap {
-  private readonly kernelBoot =
-    new KernelBoot();
+export interface KernelBootstrapOptions {
+  readonly modules?: readonly PlatformModule[];
+  readonly capabilities?: readonly Capability[];
+}
 
-  private readonly capabilities =
-    new CapabilityRuntime();
+export class KernelBootstrap {
+  private readonly kernelBoot: KernelBoot;
+  private readonly capabilities: CapabilityRuntime;
+
+  constructor(options: KernelBootstrapOptions = {}) {
+    this.kernelBoot =
+      options.modules
+        ? new KernelBoot({
+            modules: options.modules
+          })
+        : new KernelBoot();
+
+    this.capabilities =
+      new CapabilityRuntime();
+
+    for (
+      const capability of
+      options.capabilities ?? []
+    ) {
+      this.capabilities.register(
+        capability
+      );
+    }
+  }
 
   getRuntime(): PlatformRuntime {
     return this.kernelBoot.getRuntime();
