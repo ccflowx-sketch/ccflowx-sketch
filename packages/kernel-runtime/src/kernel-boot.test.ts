@@ -143,3 +143,86 @@ describe("KernelBoot", () => {
     ]);
   });
 });
+
+it("initializes capabilities before starting the platform runtime", async () => {
+  const events: string[] = [];
+
+  const boot = new KernelBoot({
+    capabilities: [
+      {
+        manifest: {
+          id: "test-capability",
+          name: "Test Capability",
+          version: "1.0.0"
+        },
+        name: "test-capability",
+        version: "1.0.0",
+        initialize: async () => {
+          events.push("capability:init");
+        },
+        shutdown: async () => {
+          events.push("capability:shutdown");
+        }
+      }
+    ],
+    modules: [
+      {
+        name: "test-module",
+        version: "1.0.0",
+        initialize: async () => {
+          events.push("module:init");
+        },
+        shutdown: async () => {
+          events.push("module:shutdown");
+        }
+      }
+    ]
+  });
+
+  await boot.start();
+
+  expect(events).toEqual([
+    "capability:init",
+    "module:init"
+  ]);
+});
+
+it("shuts down the platform runtime before capabilities", async () => {
+  const events: string[] = [];
+
+  const boot = new KernelBoot({
+    capabilities: [
+      {
+        manifest: {
+          id: "test-capability",
+          name: "Test Capability",
+          version: "1.0.0"
+        },
+        name: "test-capability",
+        version: "1.0.0",
+        initialize: async () => {},
+        shutdown: async () => {
+          events.push("capability:shutdown");
+        }
+      }
+    ],
+    modules: [
+      {
+        name: "test-module",
+        version: "1.0.0",
+        initialize: async () => {},
+        shutdown: async () => {
+          events.push("module:shutdown");
+        }
+      }
+    ]
+  });
+
+  await boot.start();
+  await boot.shutdown();
+
+  expect(events).toEqual([
+    "module:shutdown",
+    "capability:shutdown"
+  ]);
+});
