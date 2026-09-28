@@ -1,10 +1,14 @@
-import type { PlatformModule } from "@ccflowx/kernel-contracts";
+import type {
+  PlatformModule
+} from "@ccflowx/kernel-contracts";
 
+import type { Capability } from "./capability.js";
 import { CapabilityRuntime } from "./capability-runtime.js";
 import { PlatformRuntime } from "./runtime.js";
 
 export interface KernelBootOptions {
   readonly modules?: readonly PlatformModule[];
+  readonly capabilities?: readonly Capability[];
 }
 
 export class KernelBoot {
@@ -19,6 +23,10 @@ export class KernelBoot {
 
     for (const module of options.modules ?? []) {
       this.runtime.registerModule(module);
+    }
+
+    for (const capability of options.capabilities ?? []) {
+      this.capabilities.register(capability);
     }
   }
 

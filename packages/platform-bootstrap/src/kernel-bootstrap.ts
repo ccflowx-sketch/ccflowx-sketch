@@ -14,46 +14,32 @@ export interface KernelBootstrapOptions {
 
 export class KernelBootstrap {
   private readonly kernelBoot: KernelBoot;
-  private readonly capabilities: CapabilityRuntime;
 
-  constructor(options: KernelBootstrapOptions = {}) {
-    this.kernelBoot =
-      options.modules
-        ? new KernelBoot({
-            modules: options.modules
-          })
-        : new KernelBoot();
-
-    this.capabilities =
-      new CapabilityRuntime();
-
-    for (
-      const capability of
-      options.capabilities ?? []
+    constructor(
+      options: KernelBootstrapOptions = {}
     ) {
-      this.capabilities.register(
-        capability
-      );
+      this.kernelBoot = new KernelBoot({
+        ...(options.modules !== undefined
+          ? { modules: options.modules }
+          : {}),
+        ...(options.capabilities !== undefined
+          ? { capabilities: options.capabilities }
+          : {})
+      });
     }
-  }
-
   getRuntime(): PlatformRuntime {
     return this.kernelBoot.getRuntime();
   }
 
   getCapabilityRuntime(): CapabilityRuntime {
-    return this.capabilities;
+    return this.kernelBoot.getCapabilityRuntime();
   }
 
   async boot(): Promise<PlatformRuntime> {
-    await this.capabilities.initialize();
-    await this.kernelBoot.start();
-
-    return this.kernelBoot.getRuntime();
+    return this.kernelBoot.start();
   }
 
   async shutdown(): Promise<void> {
     await this.kernelBoot.shutdown();
-    await this.capabilities.shutdown();
   }
 }
