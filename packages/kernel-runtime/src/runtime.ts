@@ -1,23 +1,19 @@
 import type { PlatformModule } from "@ccflowx/kernel-contracts";
 
-import { Registry } from "@ccflowx/kernel-registry";
 import { MetadataRegistry } from "@ccflowx/kernel-metadata";
+import { Registry } from "@ccflowx/kernel-registry";
 import { randomUUID } from "node:crypto";
 
 import { DependencyContainer } from "./container.js";
+import { DefaultRuntimeContext, type RuntimeContext } from "./context.js";
 import { EventBus } from "./event-bus.js";
-import { RuntimeEvents } from "./runtime-events.js";
 import { ModuleDependencyResolver } from "./module-dependency-resolver.js";
+import { RuntimeEvents } from "./runtime-events.js";
 
+import type { RuntimeEventMap } from "./event-types.js";
 import type { RuntimeHealth } from "./runtime-health.js";
 import type { RuntimeMetrics } from "./runtime-metrics.js";
 import type { RuntimeSnapshot } from "./runtime-snapshot.js";
-import type { RuntimeEventMap } from "./event-types.js";
-
-import {
-  DefaultRuntimeContext,
-  type RuntimeContext
-} from "./context.js";
 
 export type RuntimeState =
   | "created"
@@ -30,17 +26,19 @@ export type RuntimeState =
 export class PlatformRuntime {
   private readonly runtimeId = randomUUID();
   private readonly createdAt = new Date();
-  private startedAt?: Date;
-  private stoppedAt?: Date;
-  private lastError?: unknown;
-  private startupStartedAt?: number;
-  private shutdownStartedAt?: number;
+
+  private startedAt: Date | undefined;
+  private stoppedAt: Date | undefined;
+  private lastError: unknown | undefined;
+  private startupStartedAt: number | undefined;
+  private shutdownStartedAt: number | undefined;
 
   private readonly version = "0.1.0";
 
   private readonly container = new DependencyContainer();
   private readonly registry = new Registry();
   private readonly metadata = new MetadataRegistry();
+
   private readonly eventBus =
     new EventBus<RuntimeEventMap>();
 
@@ -262,43 +260,102 @@ export class PlatformRuntime {
       }
     });
 
+    let orderedModules: readonly PlatformModule[];
+
     try {
-      const orderedModules =
+      /*
+       * Resolve dependencies before initializing anything.
+       *
+       * This is important: a missing dependency or dependency
+       * cycle must prevent module initialization completely.
+       */
+      orderedModules =
         this.moduleDependencyResolver.resolveOrder(
           this.modules
         );
 
-      for (const module of orderedModules) {
-        await module.initialize();
-      }
+      const initializedModules: PlatformModule[] = [];
 
-      this.state = "started";
-      this.startedAt = new Date();
-
-      this.metrics.startCount++;
-
-      const startupDuration =
-        Date.now() - this.startupStartedAt!;
-
-      this.metrics.lastStartupTimeMs =
-        startupDuration;
-
-      this.metrics.averageStartupTimeMs =
-        (
-          (this.metrics.averageStartupTimeMs *
-            (this.metrics.startCount - 1)) +
-          startupDuration
-        ) / this.metrics.startCount;
-
-      await this.eventBus.publish({
-        type: RuntimeEvents.Started,
-        timestamp: new Date(),
-        payload: {
-          runtimeId: this.runtimeId,
-          state: this.state
+      try {
+        for (const module of orderedModules) {
+          await module.initialize();
+          initializedModules.push(module);
         }
-      });
+
+        this.state = "started";
+        this.startedAt = new Date();
+
+        this.metrics.startCount++;
+
+        const startupDuration =
+          Date.now() - this.startupStartedAt!;
+
+        this.metrics.lastStartupTimeMs =
+          startupDuration;
+
+        this.metrics.averageStartupTimeMs =
+          (
+            (
+              this.metrics.averageStartupTimeMs *
+              (this.metrics.startCount - 1)
+            ) +
+            startupDuration
+          ) / this.metrics.startCount;
+
+        await this.eventBus.publish({
+          type: RuntimeEvents.Started,
+          timestamp: new Date(),
+          payload: {
+            runtimeId: this.runtimeId,
+            state: this.state
+          }
+        });
+      } catch (error) {
+        /*
+         * Roll back only modules that successfully initialized.
+         *
+         * The module whose initialize() threw is deliberately not
+         * included because initialization did not complete.
+         */
+        for (
+          const module of [...initializedModules].reverse()
+        ) {
+          try {
+            await module.shutdown();
+          } catch {
+            /*
+             * Preserve the original startup failure.
+             *
+             * Rollback failure should not hide the root cause that
+             * caused startup to fail.
+             */
+          }
+        }
+
+        this.state = "failed";
+        this.lastError = error;
+
+        this.metrics.failureCount++;
+
+        await this.eventBus.publish({
+          type: RuntimeEvents.Failed,
+          timestamp: new Date(),
+          payload: {
+            runtimeId: this.runtimeId,
+            state: this.state,
+            error
+          }
+        });
+
+        throw error;
+      }
     } catch (error) {
+      /*
+       * Dependency resolution failures arrive here.
+       *
+       * No modules have been initialized at this point because
+       * dependency resolution happens before the initialization loop.
+       */
       this.state = "failed";
       this.lastError = error;
 
@@ -346,7 +403,12 @@ export class PlatformRuntime {
           this.modules
         );
 
-      for (const module of [...orderedModules].reverse()) {
+      /*
+       * Dependencies start first and therefore shut down last.
+       */
+      for (
+        const module of [...orderedModules].reverse()
+      ) {
         await module.shutdown();
       }
 
@@ -362,8 +424,10 @@ export class PlatformRuntime {
 
       this.metrics.averageShutdownTimeMs =
         (
-          (this.metrics.averageShutdownTimeMs *
-            (this.metrics.stopCount - 1)) +
+          (
+            this.metrics.averageShutdownTimeMs *
+            (this.metrics.stopCount - 1)
+          ) +
           shutdownDuration
         ) / this.metrics.stopCount;
 
@@ -408,8 +472,24 @@ export class PlatformRuntime {
     }
 
     this.modules.length = 0;
+
     this.container.clear();
     this.eventBus.clear();
+
     this.state = "created";
+    this.startedAt = undefined;
+    this.stoppedAt = undefined;
+    this.lastError = undefined;
+    this.startupStartedAt = undefined;
+    this.shutdownStartedAt = undefined;
+
+    this.metrics.startCount = 0;
+    this.metrics.stopCount = 0;
+    this.metrics.failureCount = 0;
+    this.metrics.registeredModules = 0;
+    this.metrics.averageStartupTimeMs = 0;
+    this.metrics.averageShutdownTimeMs = 0;
+    this.metrics.lastStartupTimeMs = 0;
+    this.metrics.lastShutdownTimeMs = 0;
   }
 }

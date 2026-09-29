@@ -151,6 +151,77 @@ describe("KernelBoot", () => {
     ]);
   });
 
+  it("rolls back initialized modules when a later module fails", async () => {
+    const events: string[] = [];
+
+    const boot = new KernelBoot({
+      modules: [
+        {
+          name: "module-a",
+          version: "1.0.0",
+          initialize: async () => {
+            events.push("a:init");
+          },
+          shutdown: async () => {
+            events.push("a:shutdown");
+          }
+        },
+        {
+          name: "module-b",
+          version: "1.0.0",
+          initialize: async () => {
+            events.push("b:init");
+          },
+          shutdown: async () => {
+            events.push("b:shutdown");
+          }
+        },
+        {
+          name: "module-c",
+          version: "1.0.0",
+          initialize: async () => {
+            events.push("c:init");
+
+            throw new Error(
+              "module-c initialization failed"
+            );
+          },
+          shutdown: async () => {
+            events.push("c:shutdown");
+          }
+        },
+        {
+          name: "module-d",
+          version: "1.0.0",
+          initialize: async () => {
+            events.push("d:init");
+          },
+          shutdown: async () => {
+            events.push("d:shutdown");
+          }
+        }
+      ]
+    });
+
+    await expect(
+      boot.start()
+    ).rejects.toThrow(
+      "module-c initialization failed"
+    );
+
+    expect(events).toEqual([
+      "a:init",
+      "b:init",
+      "c:init",
+      "b:shutdown",
+      "a:shutdown"
+    ]);
+
+    expect(
+      boot.getRuntime().isFailed()
+    ).toBe(true);
+  });
+
   it("does not start platform modules when capability initialization fails", async () => {
     const events: string[] = [];
 
