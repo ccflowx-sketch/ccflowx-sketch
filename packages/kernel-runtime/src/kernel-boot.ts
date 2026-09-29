@@ -1,6 +1,4 @@
-import type {
-  PlatformModule
-} from "@ccflowx/kernel-contracts";
+import type { PlatformModule } from "@ccflowx/kernel-contracts";
 
 import type { Capability } from "./capability.js";
 import { CapabilityRuntime } from "./capability-runtime.js";
