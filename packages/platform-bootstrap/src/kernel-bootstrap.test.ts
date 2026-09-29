@@ -161,3 +161,55 @@ describe("KernelBootstrap", () => {
     expect(capabilityShutdown).toBe(true);
   });
 });
+
+it("initializes capabilities before runtime modules", async () => {
+  const events: string[] = [];
+
+  const boot = new KernelBootstrap({
+    capabilities: [
+      {
+        manifest: {
+          id: "test-capability",
+          name: "Test Capability",
+          version: "1.0.0"
+        },
+        name: "test-capability",
+        version: "1.0.0",
+        initialize: async () => {
+          events.push("capability:init");
+        },
+        shutdown: async () => {
+          events.push("capability:shutdown");
+        }
+      }
+    ],
+    modules: [
+      {
+        name: "test-module",
+        version: "1.0.0",
+        initialize: async () => {
+          events.push("module:init");
+        },
+        shutdown: async () => {
+          events.push("module:shutdown");
+        }
+      }
+    ]
+  });
+
+  await boot.boot();
+
+  expect(events).toEqual([
+    "capability:init",
+    "module:init"
+  ]);
+
+  await boot.shutdown();
+
+  expect(events).toEqual([
+    "capability:init",
+    "module:init",
+    "module:shutdown",
+    "capability:shutdown"
+  ]);
+});
